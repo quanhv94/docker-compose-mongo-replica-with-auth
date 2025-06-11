@@ -1,0 +1,99 @@
+services:
+  mongodb1:
+    image: mongo:latest
+    hostname: mongodb1
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb1_data:/data/db
+      - ./secrets/mongo-keyfile:/etc/keyfile
+    command: mongod --replSet rs0 --bind_ip_all --keyFile /etc/keyfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: mongosh --eval 'db.adminCommand("ping")' --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  mongodb2:
+    image: mongo:latest
+    hostname: mongodb2
+    ports:
+      - "27018:27017"
+    networks:
+      - app-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb2_data:/data/db
+      - ./secrets/mongo-keyfile:/etc/keyfile
+    command: mongod --replSet rs0 --bind_ip_all --keyFile /etc/keyfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: mongosh --eval 'db.adminCommand("ping")' --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  mongodb3:
+    image: mongo:latest
+    hostname: mongodb3
+    ports:
+      - "27019:27017"
+    networks:
+      - app-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb3_data:/data/db
+      - ./secrets/mongo-keyfile:/etc/keyfile
+    command: mongod --replSet rs0 --bind_ip_all --keyFile /etc/keyfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: mongosh --eval 'db.adminCommand("ping")' --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # MongoDB Replica Set Initialization service
+  mongo-init:
+    image: mongo:latest
+    restart: "no"
+    depends_on:
+      mongodb1:
+        condition: service_healthy
+      mongodb2:
+        condition: service_healthy
+      mongodb3:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./shell/init-replica.sh:/init-replica.sh
+    command: >
+      bash /init-replica.sh
+    deploy:
+      restart_policy:
+        condition: none
+
+volumes:
+  mongodb1_data:
+  mongodb2_data:
+  mongodb3_data:
+
+networks:
+  app-network:
+    driver: bridge
